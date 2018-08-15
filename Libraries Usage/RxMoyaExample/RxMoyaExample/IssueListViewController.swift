@@ -11,12 +11,12 @@
 //  before. Now, with use of Moya/RxSwift/ModelMapper, we will create simple
 //  model that will handle our logic and we will do everything based on
 //  Observables. First there is our observable text, which we will cover
-//  as a computed var to pass it as an observable. Now every time we got a 
-//  signal that the name in the searchbar changed, we will filter it and 
+//  as a computed var to pass it as an observable. Now every time we got a
+//  signal that the name in the searchbar changed, we will filter it and
 //  chain with additional steps. First of them would be to call github api
 //  to verify that the repo exists. If yes, we pass the signal as next
 //  observable to get the repo issues. Now that we have whole chain
-//  at the end of the chain if everything worked correctly, we now can 
+//  at the end of the chain if everything worked correctly, we now can
 //  bind our observable to table view and store it in the cell factory.
 //  With really little code we have setup really complicated logic, but
 //  what is more important is that we have done it really smooth, really
@@ -26,18 +26,17 @@
 
 import Moya
 import Moya_ModelMapper
-import UIKit
-import RxOptional
 import RxCocoa
+import RxOptional
 import RxSwift
+import UIKit
 
 class IssueListViewController: UIViewController {
-    
-    @IBOutlet weak var tableView: UITableView!
-    @IBOutlet weak var searchBar: UISearchBar!
+    @IBOutlet var tableView: UITableView!
+    @IBOutlet var searchBar: UISearchBar!
     
     let disposeBag = DisposeBag()
-    var provider: RxMoyaProvider<GitHub>!
+    var provider: MoyaProvider<GitHub>!
     var issueTrackerModel: IssueTrackerModel!
     
     var latestRepositoryName: Observable<String> {
@@ -54,7 +53,7 @@ class IssueListViewController: UIViewController {
     
     func setupRx() {
         // First part of the puzzle, create our Provider
-        provider = RxMoyaProvider<GitHub>()
+        provider = MoyaProvider<GitHub>()
         
         // Now we will setup our model
         issueTrackerModel = IssueTrackerModel(provider: provider, repositoryName: latestRepositoryName)
@@ -64,28 +63,28 @@ class IssueListViewController: UIViewController {
         // we have filled up about 3 table view data source methods
         issueTrackerModel
             .trackIssues()
-            .bindTo(tableView.rx.items) { (tableView, row, item) in
+            .bind(to: tableView.rx.items) { tableView, row, item in
                 let cell = tableView.dequeueReusableCell(withIdentifier: "issueCell", for: IndexPath(row: row, section: 0))
                 cell.textLabel?.text = item.title
                 
                 return cell
             }
-            .addDisposableTo(disposeBag)
+            .disposed(by: disposeBag)
         
         // Here we tell table view that if user clicks on a cell,
         // and the keyboard is still visible, hide it
         tableView
-            .rx.itemSelected
-            .subscribe(onNext: { indexPath in
+            .rx
+            .itemSelected
+            .subscribe(onNext: { _ in
                 if self.searchBar.isFirstResponder == true {
                     self.view.endEditing(true)
                 }
             })
-            .addDisposableTo(disposeBag)
+            .disposed(by: disposeBag)
     }
-
+    
     func url(_ route: TargetType) -> String {
         return route.baseURL.appendingPathComponent(route.path).absoluteString
     }
 }
-

@@ -22,21 +22,20 @@
 //  as you can see in the code. We will make a requst to GitHub
 //  API and fetch the request for given username. To parse json
 //  array into Repository objects we will use ObjectMapper here.
-//  And thats it! Not that hard, right? Oh, and also be careful 
+//  And thats it! Not that hard, right? Oh, and also be careful
 //  about Schedulers. :wink:
 //
 
-import UIKit
 import ObjectMapper
 import RxAlamofire
 import RxCocoa
 import RxSwift
+import UIKit
 
 class RepositoriesViewController: UIViewController {
-    
-    @IBOutlet weak var tableViewBottomConstraint: NSLayoutConstraint!
-    @IBOutlet weak var tableView: UITableView!
-    @IBOutlet weak var searchBar: UISearchBar!
+    @IBOutlet var tableViewBottomConstraint: NSLayoutConstraint!
+    @IBOutlet var tableView: UITableView!
+    @IBOutlet var searchBar: UISearchBar!
     let disposeBag = DisposeBag()
     var repositoryNetworkModel: RepositoryNetworkModel!
     
@@ -44,7 +43,7 @@ class RepositoriesViewController: UIViewController {
         return searchBar.rx.text
             .filter { $0 != nil }
             .map { $0! }
-            .filter { $0.characters.count > 0 }
+            .filter { !$0.isEmpty }
             .debounce(0.5, scheduler: MainScheduler.instance)
             .distinctUntilChanged()
     }
@@ -59,13 +58,13 @@ class RepositoriesViewController: UIViewController {
         
         repositoryNetworkModel
             .rx_repositories
-            .drive(tableView.rx.items) { (tv, i, repository) in
+            .drive(tableView.rx.items) { tv, i, repository in
                 let cell = tv.dequeueReusableCell(withIdentifier: "repositoryCell", for: IndexPath(row: i, section: 0))
                 cell.textLabel?.text = repository.name
                 
                 return cell
             }
-            .addDisposableTo(disposeBag)
+            .disposed(by: disposeBag)
         
         repositoryNetworkModel
             .rx_repositories
@@ -78,7 +77,7 @@ class RepositoriesViewController: UIViewController {
                     }
                 }
             })
-            .addDisposableTo(disposeBag)
+            .disposed(by: disposeBag)
     }
     
     func setupUI() {
@@ -88,35 +87,37 @@ class RepositoriesViewController: UIViewController {
             self,
             selector: #selector(keyboardWillShow(_:)),
             name: NSNotification.Name.UIKeyboardWillShow,
-            object: nil)
+            object: nil
+        )
         
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(keyboardWillHide(_:)),
             name: NSNotification.Name.UIKeyboardWillHide,
-            object: nil)
+            object: nil
+        )
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
     
-    func keyboardWillShow(_ notification: Notification) {
+    @objc func keyboardWillShow(_ notification: Notification) {
         guard let keyboardFrame = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue else { return }
         tableViewBottomConstraint.constant = keyboardFrame.height
-        UIView.animate(withDuration: 0.3, animations: {
+        UIView.animate(withDuration: 0.3) {
             self.view.updateConstraints()
-        }) 
+        }
     }
     
-    func keyboardWillHide(_ notification: Notification) {
+    @objc func keyboardWillHide(_ notification: Notification) {
         tableViewBottomConstraint.constant = 0.0
-        UIView.animate(withDuration: 0.3, animations: {
+        UIView.animate(withDuration: 0.3) {
             self.view.updateConstraints()
-        })
+        }
     }
     
-    func tableTapped(_ recognizer: UITapGestureRecognizer) {
+    @objc func tableTapped(_ recognizer: UITapGestureRecognizer) {
         let location = recognizer.location(in: tableView)
         let path = tableView.indexPathForRow(at: location)
         if searchBar.isFirstResponder {

@@ -7,19 +7,18 @@
 //
 
 import Foundation
-import Moya
 import Mapper
+import Moya
 import Moya_ModelMapper
 import RxOptional
 import RxSwift
 
 struct IssueTrackerModel {
-    
-    let provider: RxMoyaProvider<GitHub>
+    let provider: MoyaProvider<GitHub>
     let repositoryName: Observable<String>
     
     func trackIssues() -> Observable<[Issue]> {
-        return repositoryName
+        return self.repositoryName
             .observeOn(MainScheduler.instance)
             .flatMapLatest { name -> Observable<Repository?> in
                 print("Name: \(name)")
@@ -37,15 +36,17 @@ struct IssueTrackerModel {
     
     internal func findIssues(_ repository: Repository) -> Observable<[Issue]?> {
         return self.provider
+            .rx
             .request(GitHub.issues(repositoryFullName: repository.fullName))
-            .debug()
-            .mapArrayOptional(type: Issue.self)
+            .mapOptional(to: [Issue].self)
+            .asObservable()
     }
-
+    
     internal func findRepository(_ name: String) -> Observable<Repository?> {
         return self.provider
+            .rx
             .request(GitHub.repo(fullName: name))
-            .debug()
-            .mapObjectOptional(type: Repository.self)
+            .mapOptional(to: Repository.self)
+            .asObservable()
     }
 }
